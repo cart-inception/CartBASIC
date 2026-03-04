@@ -61,12 +61,16 @@ This document outlines the step-by-step phases for building the modern BASIC int
 
 **Goal:** Implement dynamic lists and dictionaries.
 
+**Status:** Completed (March 4, 2026).
+
 - **Task 6.1: Array/List Implementation.** Add an ArrayObject (backed by a Go slice) to the object system. Update the parser to handle `[1, 2, 3]` syntax and index operators `myList[0]`.
 - **Task 6.2: Dictionary Implementation.** Add a HashObject (backed by a Go map). Implement parsing for `{"key": "value"}` and retrieval logic.
 
 ## Phase 7: The Standard Library
 
 **Goal:** Provide the built-in tools that make the language useful.
+
+**Status:** Completed (March 4, 2026).
 
 - **Task 7.1: Setup Built-in Function Registry.** Create a way to register native Go functions that can be called from within the BASIC code.
 - **Task 7.2: Implement I/O.** Write the `File.Read` and `File.Write` built-ins using Go's `os` and `io` packages.

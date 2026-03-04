@@ -19,6 +19,8 @@ func TestObjectInspectAndType(t *testing.T) {
 		{name: "return value", obj: &ReturnValue{Value: &Integer{Value: 7}}, expectedType: RETURN_VALUE, expectedText: "7"},
 		{name: "error", obj: &Error{Message: "type mismatch: INTEGER + BOOLEAN"}, expectedType: ERROR, expectedText: "ERROR: type mismatch: INTEGER + BOOLEAN"},
 		{name: "function", obj: &Function{Parameters: []*ast.Identifier{{Value: "x"}}, Body: &ast.BlockStatement{}}, expectedType: FUNCTION, expectedText: "fn(x) {}"},
+		{name: "builtin", obj: &Builtin{Fn: func(args ...Object) Object { return &Null{} }}, expectedType: BUILTIN, expectedText: "<builtin>"},
+		{name: "array", obj: &Array{Elements: []Object{&Integer{Value: 1}, &String{Value: "two"}}}, expectedType: ARRAY, expectedText: "[1, two]"},
 	}
 
 	for _, tt := range tests {
@@ -29,6 +31,66 @@ func TestObjectInspectAndType(t *testing.T) {
 		if tt.obj.Inspect() != tt.expectedText {
 			t.Fatalf("%s: expected inspect %q, got %q", tt.name, tt.expectedText, tt.obj.Inspect())
 		}
+	}
+}
+
+func TestHashKeySupport(t *testing.T) {
+	hello1 := &String{Value: "Hello World"}
+	hello2 := &String{Value: "Hello World"}
+	diff1 := &String{Value: "My name is johnny"}
+	diff2 := &String{Value: "My name is johnny"}
+
+	if hello1.HashKey() != hello2.HashKey() {
+		t.Fatalf("strings with same content have different hash keys")
+	}
+
+	if diff1.HashKey() != diff2.HashKey() {
+		t.Fatalf("strings with same content have different hash keys")
+	}
+
+	if hello1.HashKey() == diff1.HashKey() {
+		t.Fatalf("strings with different content have same hash keys")
+	}
+
+	one1 := &Integer{Value: 1}
+	one2 := &Integer{Value: 1}
+	two := &Integer{Value: 2}
+
+	if one1.HashKey() != one2.HashKey() {
+		t.Fatalf("integers with same content have different hash keys")
+	}
+
+	if one1.HashKey() == two.HashKey() {
+		t.Fatalf("integers with different content have same hash keys")
+	}
+
+	true1 := &Boolean{Value: true}
+	true2 := &Boolean{Value: true}
+	false1 := &Boolean{Value: false}
+
+	if true1.HashKey() != true2.HashKey() {
+		t.Fatalf("booleans with same content have different hash keys")
+	}
+
+	if true1.HashKey() == false1.HashKey() {
+		t.Fatalf("booleans with different content have same hash keys")
+	}
+}
+
+func TestHashObjectInspectAndType(t *testing.T) {
+	key := &String{Value: "name"}
+	hash := &Hash{
+		Pairs: map[HashKey]HashPair{
+			key.HashKey(): {Key: key, Value: &String{Value: "cart"}},
+		},
+	}
+
+	if hash.Type() != HASH {
+		t.Fatalf("expected type %q, got %q", HASH, hash.Type())
+	}
+
+	if got := hash.Inspect(); got != "{name: cart}" {
+		t.Fatalf("expected inspect %q, got %q", "{name: cart}", got)
 	}
 }
 

@@ -26,6 +26,7 @@ if (5 < 10) {
 "foo bar";
 [1, 2];
 {"foo": "bar"};
+File.Read("x.txt");
 `
 
 	tests := []struct {
@@ -120,6 +121,13 @@ if (5 < 10) {
 		{token.COLON, ":"},
 		{token.STRING, "bar"},
 		{token.RBRACE, "}"},
+		{token.SEMICOLON, ";"},
+		{token.IDENT, "File"},
+		{token.DOT, "."},
+		{token.IDENT, "Read"},
+		{token.LPAREN, "("},
+		{token.STRING, "x.txt"},
+		{token.RPAREN, ")"},
 		{token.SEMICOLON, ";"},
 		{token.EOF, ""},
 	}

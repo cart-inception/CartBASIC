@@ -3,7 +3,9 @@ package object
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"modern-basic/ast"
+	"sort"
 	"strings"
 )
 
@@ -18,13 +20,30 @@ const (
 	RETURN_VALUE ObjectType = "RETURN_VALUE"
 	ERROR        ObjectType = "ERROR"
 	FUNCTION     ObjectType = "FUNCTION"
+	BUILTIN      ObjectType = "BUILTIN"
+	ARRAY        ObjectType = "ARRAY"
+	HASH         ObjectType = "HASH"
 )
+
+// HashKey identifies a hashable key value.
+type HashKey struct {
+	Type  ObjectType
+	Value uint64
+}
+
+// Hashable marks runtime objects that can be used as hash keys.
+type Hashable interface {
+	HashKey() HashKey
+}
 
 // Object is the runtime value interface used by the evaluator.
 type Object interface {
 	Type() ObjectType
 	Inspect() string
 }
+
+// BuiltinFunction defines a native function callable by the interpreter.
+type BuiltinFunction func(args ...Object) Object
 
 // Integer wraps an int64 runtime value.
 type Integer struct {
@@ -35,6 +54,11 @@ func (i *Integer) Type() ObjectType { return INTEGER }
 
 func (i *Integer) Inspect() string { return fmt.Sprintf("%d", i.Value) }
 
+// HashKey returns a stable hash key for integers.
+func (i *Integer) HashKey() HashKey {
+	return HashKey{Type: i.Type(), Value: uint64(i.Value)}
+}
+
 // Boolean wraps a boolean runtime value.
 type Boolean struct {
 	Value bool
@@ -44,6 +68,15 @@ func (b *Boolean) Type() ObjectType { return BOOLEAN }
 
 func (b *Boolean) Inspect() string { return fmt.Sprintf("%t", b.Value) }
 
+// HashKey returns a stable hash key for booleans.
+func (b *Boolean) HashKey() HashKey {
+	if b.Value {
+		return HashKey{Type: b.Type(), Value: 1}
+	}
+
+	return HashKey{Type: b.Type(), Value: 0}
+}
+
 // String wraps a string runtime value.
 type String struct {
 	Value string
@@ -52,6 +85,13 @@ type String struct {
 func (s *String) Type() ObjectType { return STRING }
 
 func (s *String) Inspect() string { return s.Value }
+
+// HashKey returns a stable hash key for strings.
+func (s *String) HashKey() HashKey {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s.Value))
+	return HashKey{Type: s.Type(), Value: h.Sum64()}
+}
 
 // Null represents the absence of a value.
 type Null struct{}
@@ -90,7 +130,55 @@ type Function struct {
 	Env        *Environment
 }
 
+// Builtin wraps a native Go function.
+type Builtin struct {
+	Fn BuiltinFunction
+}
+
+// Array represents an ordered list of runtime objects.
+type Array struct {
+	Elements []Object
+}
+
+func (a *Array) Type() ObjectType { return ARRAY }
+
+func (a *Array) Inspect() string {
+	parts := make([]string, 0, len(a.Elements))
+	for _, el := range a.Elements {
+		parts = append(parts, el.Inspect())
+	}
+
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
+// HashPair stores the original key object and mapped value.
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+// Hash represents key-value mappings for hashable keys.
+type Hash struct {
+	Pairs map[HashKey]HashPair
+}
+
+func (h *Hash) Type() ObjectType { return HASH }
+
+func (h *Hash) Inspect() string {
+	parts := make([]string, 0, len(h.Pairs))
+	for _, pair := range h.Pairs {
+		parts = append(parts, pair.Key.Inspect()+": "+pair.Value.Inspect())
+	}
+	sort.Strings(parts)
+
+	return "{" + strings.Join(parts, ", ") + "}"
+}
+
 func (f *Function) Type() ObjectType { return FUNCTION }
+
+func (b *Builtin) Type() ObjectType { return BUILTIN }
+
+func (b *Builtin) Inspect() string { return "<builtin>" }
 
 func (f *Function) Inspect() string {
 	var out bytes.Buffer

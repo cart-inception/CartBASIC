@@ -509,3 +509,126 @@ func (ce *CallExpression) String() string {
 
 	return out.String()
 }
+
+// DotExpression represents dotted access: left.right.
+type DotExpression struct {
+	Token token.Token // token.DOT
+	Left  Expression
+	Right *Identifier
+}
+
+func (de *DotExpression) expressionNode() {}
+
+// TokenLiteral returns the source token literal.
+func (de *DotExpression) TokenLiteral() string {
+	return de.Token.Literal
+}
+
+// String renders a dotted expression.
+func (de *DotExpression) String() string {
+	var out bytes.Buffer
+
+	if de.Left != nil {
+		out.WriteString(de.Left.String())
+	}
+	out.WriteString(".")
+	if de.Right != nil {
+		out.WriteString(de.Right.String())
+	}
+
+	return out.String()
+}
+
+// ArrayLiteral represents list literals like [1, 2, 3].
+type ArrayLiteral struct {
+	Token    token.Token // token.LBRACKET
+	Elements []Expression
+}
+
+func (al *ArrayLiteral) expressionNode() {}
+
+// TokenLiteral returns the source token literal.
+func (al *ArrayLiteral) TokenLiteral() string {
+	return al.Token.Literal
+}
+
+// String renders the array literal.
+func (al *ArrayLiteral) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("[")
+	for i, el := range al.Elements {
+		if i > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(el.String())
+	}
+	out.WriteString("]")
+
+	return out.String()
+}
+
+// IndexExpression represents indexing into arrays/hashes: left[index].
+type IndexExpression struct {
+	Token token.Token // token.LBRACKET
+	Left  Expression
+	Index Expression
+}
+
+func (ie *IndexExpression) expressionNode() {}
+
+// TokenLiteral returns the source token literal.
+func (ie *IndexExpression) TokenLiteral() string {
+	return ie.Token.Literal
+}
+
+// String renders the index expression.
+func (ie *IndexExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	if ie.Left != nil {
+		out.WriteString(ie.Left.String())
+	}
+	out.WriteString("[")
+	if ie.Index != nil {
+		out.WriteString(ie.Index.String())
+	}
+	out.WriteString("]")
+	out.WriteString(")")
+
+	return out.String()
+}
+
+// HashLiteral represents dictionary literals: {key: value}.
+type HashLiteral struct {
+	Token token.Token // token.LBRACE
+	Pairs map[Expression]Expression
+}
+
+func (hl *HashLiteral) expressionNode() {}
+
+// TokenLiteral returns the source token literal.
+func (hl *HashLiteral) TokenLiteral() string {
+	return hl.Token.Literal
+}
+
+// String renders the hash literal.
+func (hl *HashLiteral) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("{")
+	i := 0
+	for key, value := range hl.Pairs {
+		if i > 0 {
+			out.WriteString(", ")
+		}
+		out.WriteString(key.String())
+		out.WriteString(": ")
+		out.WriteString(value.String())
+		i++
+	}
+	out.WriteString("}")
+
+	return out.String()
+}
