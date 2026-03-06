@@ -18,6 +18,7 @@ func TestObjectInspectAndType(t *testing.T) {
 		{name: "null", obj: &Null{}, expectedType: NULL, expectedText: "null"},
 		{name: "return value", obj: &ReturnValue{Value: &Integer{Value: 7}}, expectedType: RETURN_VALUE, expectedText: "7"},
 		{name: "error", obj: &Error{Message: "type mismatch: INTEGER + BOOLEAN"}, expectedType: ERROR, expectedText: "ERROR: type mismatch: INTEGER + BOOLEAN"},
+		{name: "caught error", obj: &CaughtError{Err: &Error{Message: "division by zero"}}, expectedType: CAUGHT_ERROR, expectedText: "ERROR: division by zero"},
 		{name: "function", obj: &Function{Parameters: []*ast.Identifier{{Value: "x"}}, Body: &ast.BlockStatement{}}, expectedType: FUNCTION, expectedText: "fn(x) {}"},
 		{name: "builtin", obj: &Builtin{Fn: func(args ...Object) Object { return &Null{} }}, expectedType: BUILTIN, expectedText: "<builtin>"},
 		{name: "array", obj: &Array{Elements: []Object{&Integer{Value: 1}, &String{Value: "two"}}}, expectedType: ARRAY, expectedText: "[1, two]"},

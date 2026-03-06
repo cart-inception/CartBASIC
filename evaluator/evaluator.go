@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"modern-basic/ast"
 	"modern-basic/object"
+	"sync"
 )
 
 var (
 	trueObj  = &object.Boolean{Value: true}
 	falseObj = &object.Boolean{Value: false}
 	nullObj  = &object.Null{}
+	spawnWG  sync.WaitGroup
 )
 
 // Eval evaluates an AST node and returns the resulting runtime object.
@@ -89,6 +91,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 
+	case *ast.TryExpression:
+		return evalTryExpression(node, env)
+
 	case *ast.WhileExpression:
 		return evalWhileExpression(node, env)
 
@@ -110,6 +115,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return applyFunction(function, args)
+
+	case *ast.SpawnStatement:
+		return evalSpawnStatement(node, env)
 
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env)
@@ -170,6 +178,43 @@ func evalIfExpression(expression *ast.IfExpression, env *object.Environment) obj
 	if expression.Alternative != nil {
 		return Eval(expression.Alternative, env)
 	}
+
+	return nullObj
+}
+
+func evalTryExpression(expression *ast.TryExpression, env *object.Environment) object.Object {
+	result := Eval(expression.TryBlock, env)
+	errObj, ok := result.(*object.Error)
+	if !ok {
+		return result
+	}
+
+	catchEnv := object.NewEnclosedEnvironment(env)
+	catchEnv.Set(expression.CatchIdent.Value, &object.CaughtError{Err: errObj})
+
+	return Eval(expression.CatchBlock, catchEnv)
+}
+
+func evalSpawnStatement(statement *ast.SpawnStatement, env *object.Environment) object.Object {
+	function := Eval(statement.Call.Function, env)
+	if isError(function) {
+		return function
+	}
+
+	args := evalExpressions(statement.Call.Arguments, env)
+	if len(args) == 1 && isError(args[0]) {
+		return args[0]
+	}
+
+	if validationError := validateSpawnCall(function, args); validationError != nil {
+		return validationError
+	}
+
+	spawnWG.Add(1)
+	go func(fn object.Object, callArgs []object.Object) {
+		defer spawnWG.Done()
+		_ = applyFunction(fn, callArgs)
+	}(function, args)
 
 	return nullObj
 }
@@ -278,6 +323,28 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 
 	evaluated := Eval(function.Body, extendedEnv)
 	return unwrapReturnValue(evaluated)
+}
+
+func validateSpawnCall(fn object.Object, args []object.Object) *object.Error {
+	if _, ok := fn.(*object.Builtin); ok {
+		return nil
+	}
+
+	function, ok := fn.(*object.Function)
+	if !ok {
+		return newError("not a function: %s", fn.Type())
+	}
+
+	if len(args) != len(function.Parameters) {
+		return newError("wrong number of arguments: got=%d, want=%d", len(args), len(function.Parameters))
+	}
+
+	return nil
+}
+
+// WaitForSpawnTasks blocks until all spawned calls finish.
+func WaitForSpawnTasks() {
+	spawnWG.Wait()
 }
 
 func unwrapReturnValue(obj object.Object) object.Object {

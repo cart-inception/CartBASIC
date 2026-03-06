@@ -81,6 +81,8 @@ This document outlines the step-by-step phases for building the modern BASIC int
 
 **Goal:** Add the distinguishing modern features detailed in the design document.
 
+**Status:** Completed (March 5, 2026).
+
 - **Task 8.1: Try/Catch.** Implement the Try block in the parser. In the evaluator, modify how errors bubble up. If an error object is returned inside a Try block, bind it to the variable in the Catch block instead of halting execution.
 - **Task 8.2: The Spawn Keyword.** Implement the Spawn statement. In the evaluator, when this node is encountered, execute the function call inside a Go goroutine (`go evalFunction(...)`), allowing the main interpreter to continue immediately.
 
@@ -88,6 +90,8 @@ This document outlines the step-by-step phases for building the modern BASIC int
 
 **Goal:** Package the language for actual use.
 
-- **Task 9.1: File Execution.** Modify the main package to read and execute `.bas` files from the command line (e.g., `modern-basic run script.bas`).
+**Status:** Completed (March 5, 2026).
+
+- **Task 9.1: File Execution.** Modify the main package to read and execute `.bas` files from the command line (e.g., `cart-basic run script.bas`).
 - **Task 9.2: Standard Library Documentation.** Document the built-in functions.
 - **Task 9.3: Refactoring and Edge Cases.** Run comprehensive tests, check for memory leaks (especially in the Environment scopes), and handle edge cases in syntax errors.

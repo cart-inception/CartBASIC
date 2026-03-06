@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"modern-basic/ast"
 	"modern-basic/lexer"
+	"strings"
 	"testing"
 )
 
@@ -751,6 +752,120 @@ func TestIndexExpressionPrecedenceParsing(t *testing.T) {
 		if actual != tt.expected {
 			t.Fatalf("expected=%q, got=%q", tt.expected, actual)
 		}
+	}
+}
+
+func TestTryCatchExpressionParsing(t *testing.T) {
+	input := `try { let x = 1; } catch err { let y = err; }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has wrong statement count. got=%d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement not *ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	tryExp, ok := stmt.Expression.(*ast.TryExpression)
+	if !ok {
+		t.Fatalf("expression not *ast.TryExpression. got=%T", stmt.Expression)
+	}
+
+	if len(tryExp.TryBlock.Statements) != 1 {
+		t.Fatalf("try block statement count wrong. got=%d", len(tryExp.TryBlock.Statements))
+	}
+
+	if tryExp.CatchIdent == nil || tryExp.CatchIdent.Value != "err" {
+		t.Fatalf("catch identifier wrong. got=%v", tryExp.CatchIdent)
+	}
+
+	if len(tryExp.CatchBlock.Statements) != 1 {
+		t.Fatalf("catch block statement count wrong. got=%d", len(tryExp.CatchBlock.Statements))
+	}
+}
+
+func TestTryCatchExpressionParsingFailures(t *testing.T) {
+	tests := []string{
+		`try { let x = 1; }`,
+		`try { let x = 1; } catch { let y = 2; }`,
+		`try { let x = 1; } catch err let y = 2;`,
+	}
+
+	for _, input := range tests {
+		l := lexer.New(input)
+		p := New(l)
+		_ = p.ParseProgram()
+
+		if len(p.Errors()) == 0 {
+			t.Fatalf("expected parser errors for input %q", input)
+		}
+	}
+}
+
+func TestSpawnStatementParsing(t *testing.T) {
+	tests := []struct {
+		input        string
+		expectedFunc string
+		expectedArgs int
+	}{
+		{`spawn work(1, 2);`, "work", 2},
+		{`spawn File.Read(path);`, "File.Read", 1},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program has wrong statement count. got=%d", len(program.Statements))
+		}
+
+		spawnStmt, ok := program.Statements[0].(*ast.SpawnStatement)
+		if !ok {
+			t.Fatalf("statement not *ast.SpawnStatement. got=%T", program.Statements[0])
+		}
+
+		if spawnStmt.Call == nil {
+			t.Fatalf("spawn call is nil")
+		}
+
+		if spawnStmt.Call.Function.String() != tt.expectedFunc {
+			t.Fatalf("spawn function mismatch. expected=%q got=%q", tt.expectedFunc, spawnStmt.Call.Function.String())
+		}
+
+		if len(spawnStmt.Call.Arguments) != tt.expectedArgs {
+			t.Fatalf("spawn argument count wrong. expected=%d got=%d", tt.expectedArgs, len(spawnStmt.Call.Arguments))
+		}
+	}
+}
+
+func TestSpawnStatementParsingFailure(t *testing.T) {
+	l := lexer.New(`spawn x;`)
+	p := New(l)
+	_ = p.ParseProgram()
+
+	if len(p.Errors()) == 0 {
+		t.Fatalf("expected parser error for non-call spawn usage")
+	}
+
+	found := false
+	for _, msg := range p.Errors() {
+		if strings.Contains(msg, "spawn requires call expression") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected spawn parse error message, got=%v", p.Errors())
 	}
 }
 

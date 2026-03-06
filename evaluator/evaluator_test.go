@@ -404,6 +404,85 @@ func TestIndexOperatorErrors(t *testing.T) {
 	}
 }
 
+func TestTryCatchWithoutError(t *testing.T) {
+	input := `try { 10; } catch err { 20; }`
+	testIntegerObject(t, testEval(t, input), 10)
+}
+
+func TestTryCatchRuntimeErrorBindsVariable(t *testing.T) {
+	input := `try { 1 / 0; } catch err { err; }`
+	evaluated := testEval(t, input)
+	testCaughtErrorObject(t, evaluated, "ERROR: division by zero")
+}
+
+func TestNestedTryCatch(t *testing.T) {
+	input := `try { try { 1 / 0; } catch inner { 11; } } catch outer { 22; }`
+	testIntegerObject(t, testEval(t, input), 11)
+}
+
+func TestTryCatchReturnInteraction(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{
+			input: `
+let f = fn() {
+  try { return 7; } catch err { return 1; }
+};
+f();
+`,
+			expected: 7,
+		},
+		{
+			input: `
+let f = fn() {
+  try { 1 / 0; } catch err { return 9; }
+  return 1;
+};
+f();
+`,
+			expected: 9,
+		},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(t, tt.input), tt.expected)
+	}
+}
+
+func TestSpawnHappyPathNonBlocking(t *testing.T) {
+	input := `
+let f = fn() { 1 / 0; };
+spawn f();
+42;
+`
+
+	testIntegerObject(t, testEvalAndWaitSpawn(t, input), 42)
+}
+
+func TestSpawnInvalidUsageErrors(t *testing.T) {
+	tests := []struct {
+		input           string
+		expectedMessage string
+	}{
+		{`spawn 1(2);`, "not a function: INTEGER"},
+		{`let f = fn(x) { x; }; spawn f(1, 2);`, "wrong number of arguments: got=2, want=1"},
+	}
+
+	for _, tt := range tests {
+		testErrorObject(t, testEval(t, tt.input), tt.expectedMessage)
+	}
+}
+
+func testEvalAndWaitSpawn(t *testing.T, input string) object.Object {
+	t.Helper()
+
+	result := testEval(t, input)
+	WaitForSpawnTasks()
+	return result
+}
+
 func testEval(t *testing.T, input string) object.Object {
 	t.Helper()
 
@@ -467,5 +546,18 @@ func testErrorObject(t *testing.T, obj object.Object, expectedMessage string) {
 
 	if errObj.Message != expectedMessage {
 		t.Fatalf("wrong error message. expected=%q, got=%q", expectedMessage, errObj.Message)
+	}
+}
+
+func testCaughtErrorObject(t *testing.T, obj object.Object, expectedInspect string) {
+	t.Helper()
+
+	caughtObj, ok := obj.(*object.CaughtError)
+	if !ok {
+		t.Fatalf("object is not *object.CaughtError. got=%T (%+v)", obj, obj)
+	}
+
+	if caughtObj.Inspect() != expectedInspect {
+		t.Fatalf("wrong caught error inspect. expected=%q, got=%q", expectedInspect, caughtObj.Inspect())
 	}
 }

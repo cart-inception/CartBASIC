@@ -146,3 +146,44 @@ File.Read("x.txt");
 		}
 	}
 }
+
+func TestNextTokenPhase8Keywords(t *testing.T) {
+	input := `try { 1; } catch err { 2; } spawn work(3);`
+
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+	}{
+		{token.TRY, "try"},
+		{token.LBRACE, "{"},
+		{token.INT, "1"},
+		{token.SEMICOLON, ";"},
+		{token.RBRACE, "}"},
+		{token.CATCH, "catch"},
+		{token.IDENT, "err"},
+		{token.LBRACE, "{"},
+		{token.INT, "2"},
+		{token.SEMICOLON, ";"},
+		{token.RBRACE, "}"},
+		{token.SPAWN, "spawn"},
+		{token.IDENT, "work"},
+		{token.LPAREN, "("},
+		{token.INT, "3"},
+		{token.RPAREN, ")"},
+		{token.SEMICOLON, ";"},
+		{token.EOF, ""},
+	}
+
+	l := New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+		if tok.Type != tt.expectedType {
+			t.Fatalf("tests[%d] - token type wrong. expected=%q, got=%q", i, tt.expectedType, tok.Type)
+		}
+
+		if tok.Literal != tt.expectedLiteral {
+			t.Fatalf("tests[%d] - token literal wrong. expected=%q, got=%q", i, tt.expectedLiteral, tok.Literal)
+		}
+	}
+}

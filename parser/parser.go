@@ -72,6 +72,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.TRY, p.parseTryExpression)
 	p.registerPrefix(token.WHILE, p.parseWhileExpression)
 	p.registerPrefix(token.FOR, p.parseForExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
@@ -129,6 +130,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseExpressionStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
+	case token.SPAWN:
+		return p.parseSpawnStatement()
 	case token.IDENT:
 		if p.peekTokenIs(token.ASSIGN) {
 			return p.parseAssignStatement()
@@ -443,6 +446,53 @@ func (p *Parser) parseForExpression() ast.Expression {
 
 	expression.Body = p.parseBlockStatement()
 	return expression
+}
+
+func (p *Parser) parseTryExpression() ast.Expression {
+	expression := &ast.TryExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.TryBlock = p.parseBlockStatement()
+
+	if !p.peekTokenIs(token.CATCH) {
+		p.peekError(token.CATCH)
+		return nil
+	}
+	p.nextToken()
+
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	expression.CatchIdent = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.CatchBlock = p.parseBlockStatement()
+
+	return expression
+}
+
+func (p *Parser) parseSpawnStatement() ast.Statement {
+	stmt := &ast.SpawnStatement{Token: p.curToken}
+
+	p.nextToken()
+	callCandidate := p.parseExpression(LOWEST)
+	call, ok := callCandidate.(*ast.CallExpression)
+	if !ok {
+		p.errors = append(p.errors, fmt.Sprintf("spawn requires call expression, got %T", callCandidate))
+		return nil
+	}
+
+	stmt.Call = call
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
 }
 
 func (p *Parser) parseForClauseStatement() ast.Statement {

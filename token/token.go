@@ -54,6 +54,9 @@ const (
 	WHILE    TokenType = "WHILE"
 	FOR      TokenType = "FOR"
 	RETURN   TokenType = "RETURN"
+	TRY      TokenType = "TRY"
+	CATCH    TokenType = "CATCH"
+	SPAWN    TokenType = "SPAWN"
 	TRUE     TokenType = "TRUE"
 	FALSE    TokenType = "FALSE"
 )
@@ -68,6 +71,9 @@ var keywords = map[string]TokenType{
 	"while":    WHILE,
 	"for":      FOR,
 	"return":   RETURN,
+	"try":      TRY,
+	"catch":    CATCH,
+	"spawn":    SPAWN,
 	"true":     TRUE,
 	"false":    FALSE,
 }

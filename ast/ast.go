@@ -441,6 +441,71 @@ func (fe *ForExpression) String() string {
 	return out.String()
 }
 
+// TryExpression represents try/catch control flow.
+type TryExpression struct {
+	Token      token.Token // token.TRY
+	TryBlock   *BlockStatement
+	CatchIdent *Identifier
+	CatchBlock *BlockStatement
+}
+
+func (te *TryExpression) expressionNode() {}
+
+// TokenLiteral returns the source token literal.
+func (te *TryExpression) TokenLiteral() string {
+	return te.Token.Literal
+}
+
+// String renders the try/catch expression.
+func (te *TryExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("try")
+	out.WriteString("{")
+	if te.TryBlock != nil {
+		out.WriteString(te.TryBlock.String())
+	}
+	out.WriteString("}")
+	out.WriteString("catch")
+	out.WriteString(" ")
+	if te.CatchIdent != nil {
+		out.WriteString(te.CatchIdent.String())
+	}
+	out.WriteString(" {")
+	if te.CatchBlock != nil {
+		out.WriteString(te.CatchBlock.String())
+	}
+	out.WriteString("}")
+
+	return out.String()
+}
+
+// SpawnStatement represents fire-and-forget async call execution.
+type SpawnStatement struct {
+	Token token.Token // token.SPAWN
+	Call  *CallExpression
+}
+
+func (ss *SpawnStatement) statementNode() {}
+
+// TokenLiteral returns the source token literal.
+func (ss *SpawnStatement) TokenLiteral() string {
+	return ss.Token.Literal
+}
+
+// String renders a spawn statement.
+func (ss *SpawnStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("spawn ")
+	if ss.Call != nil {
+		out.WriteString(ss.Call.String())
+	}
+	out.WriteString(";")
+
+	return out.String()
+}
+
 // FunctionLiteral represents `fn(x, y) { ... }`.
 type FunctionLiteral struct {
 	Token      token.Token // token.FUNCTION

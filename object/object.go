@@ -19,6 +19,7 @@ const (
 	NULL         ObjectType = "NULL"
 	RETURN_VALUE ObjectType = "RETURN_VALUE"
 	ERROR        ObjectType = "ERROR"
+	CAUGHT_ERROR ObjectType = "CAUGHT_ERROR"
 	FUNCTION     ObjectType = "FUNCTION"
 	BUILTIN      ObjectType = "BUILTIN"
 	ARRAY        ObjectType = "ARRAY"
@@ -122,6 +123,21 @@ type Error struct {
 func (e *Error) Type() ObjectType { return ERROR }
 
 func (e *Error) Inspect() string { return "ERROR: " + strings.TrimSpace(e.Message) }
+
+// CaughtError wraps an error intercepted by try/catch so it can be used as a regular value.
+type CaughtError struct {
+	Err *Error
+}
+
+func (ce *CaughtError) Type() ObjectType { return CAUGHT_ERROR }
+
+func (ce *CaughtError) Inspect() string {
+	if ce.Err == nil {
+		return "ERROR:"
+	}
+
+	return ce.Err.Inspect()
+}
 
 // Function stores a user-defined function and its lexical environment.
 type Function struct {
